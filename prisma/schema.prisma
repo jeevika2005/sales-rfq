@@ -29,6 +29,7 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  customers    Customer[]
 }
 
 model Customer {
@@ -44,4 +45,62 @@ model Customer {
   updatedAt   DateTime @updatedAt
 
   @@index([name])
+}
+
+enum DataScope {
+  CREATED
+  ASSIGNED
+  ALL
+}
+
+model Role {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  dataScope   DataScope
+  active      Boolean  @default(true)
+  trashed     Boolean  @default(false)
+  createdBy   String   @db.Uuid
+  updatedBy   String?  @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+
+  @@index([name])
+}
+
+model RolePermission {
+  id          String   @id @default(uuid()) @db.Uuid
+  roleId      String   @db.Uuid
+  role        Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  menuKey     String
+  permissions Json
+  active      Boolean  @default(true)
+  trashed     Boolean  @default(false)
+  createdBy   String   @db.Uuid
+  updatedBy   String?  @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([roleId, menuKey])
+}
+
+model LeftMenu {
+  id       String  @id @default(uuid()) @db.Uuid
+  menuKey  String  @unique
+  name     String
+  icon     String?
+  url      String?
+  isParent Boolean @default(false)
+
+  parentId String?    @db.Uuid
+  parent   LeftMenu?  @relation("LeftMenuParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children LeftMenu[] @relation("LeftMenuParent")
+
+  active    Boolean  @default(true)
+  trashed   Boolean  @default(false)
+  createdBy String   @db.Uuid
+  updatedBy String?  @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

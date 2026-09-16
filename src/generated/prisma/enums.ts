@@ -17,3 +17,12 @@ export const UserRole = {
 } as const
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole]
+
+
+export const DataScope = {
+  CREATED: 'CREATED',
+  ASSIGNED: 'ASSIGNED',
+  ALL: 'ALL'
+} as const
+
+export type DataScope = (typeof DataScope)[keyof typeof DataScope]

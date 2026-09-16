@@ -3,10 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
-// Client Component: the earlier static version had no state or handlers.
-// Real sign-in needs both (pending/error UI while signIn() round-trips to
-// /api/auth), which only a Client Component can hold — that's the line
-// between the two, not "forms are always client".
+
 export default function LoginPage() {
   const router = useRouter();
   const [isPending, setIsPending] = useState(false);
