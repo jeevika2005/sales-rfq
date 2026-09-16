@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+/*
+  Indigo Ops UI Brand Guide — core semantic tokens.
+  Light values live on :root; dark values override the same names
+  under prefers-color-scheme so every component stays theme-aware
+  by reading the token, never a hardcoded hex.
+*/
+:root {
+  --background: #f7f9fb;
+  --foreground: #0e1629;
+  --card: #ffffff;
+  --primary: #4649e5;
+  --primary-foreground: #ffffff;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --border: #e2e8f0;
+  --destructive: #ee4444;
+  --destructive-foreground: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --font-sans: var(--font-inter), "Inter", sans-serif;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --card: #1a1a1a;
+  --primary: #6466f1;
+  --primary-foreground: #ffffff;
+  --muted: #171717;
+  --muted-foreground: #a3a3a3;
+  --border: #262626;
+  --destructive: #7f1d1d;
+  --destructive-foreground: #fafafa;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 12px;
+}
