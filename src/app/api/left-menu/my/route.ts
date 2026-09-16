@@ -1,0 +1,5 @@
+import { MyMenu } from "@/controllers/left-menu.controller";
+
+export async function GET() {
+  return MyMenu();
+}

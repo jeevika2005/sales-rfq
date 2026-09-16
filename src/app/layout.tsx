@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-// Brand guide calls for the native system-ui stack (no webfont dependency
-// for body chrome) — defined once as --font-sans in globals.css.
-
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "Sales RFQ",
@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" suppressHydrationWarning className="h-full antialiased">
-      <body className="min-h-full flex flex-col font-sans">
+    <html lang="en" suppressHydrationWarning className={`h-full antialiased ${inter.variable}`}>
+      <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           {children}
         </ThemeProvider>

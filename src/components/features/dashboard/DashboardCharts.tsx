@@ -1,11 +1,12 @@
 "use client";
 
 import React from 'react';
-import { 
+import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell,
   FunnelChart, Funnel, LabelList
 } from 'recharts';
+import type { ValueType } from 'recharts/types/component/DefaultTooltipContent';
 
 const mockTrendData = [
   { name: 'Jan', quotes: 12, won: 4, lost: 2 },
@@ -73,7 +74,7 @@ export function DashboardCharts() {
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} 
                 tickFormatter={(value) => `$${value/1000}k`} />
-              <Tooltip formatter={(value: any) => [`$${Number(value).toLocaleString()}`, 'Revenue']} />
+              <Tooltip formatter={(value: ValueType | undefined) => [`$${Number(value).toLocaleString()}`, 'Revenue']} />
               <Line type="monotone" dataKey="revenue" stroke="#4649e5" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
             </LineChart>
           </ResponsiveContainer>
@@ -133,7 +134,7 @@ export function DashboardCharts() {
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(value: any) => [`${value} days`, 'Avg Time to Close']} />
+              <Tooltip formatter={(value: ValueType | undefined) => [`${value} days`, 'Avg Time to Close']} />
               <Line type="monotone" dataKey="days" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
             </LineChart>
           </ResponsiveContainer>

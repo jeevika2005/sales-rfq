@@ -11,6 +11,7 @@ export function Header({ title, subtitle }: { title: string; subtitle?: string }
   const [lang, setLang] = useState("EN");
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- theme is only known client-side, avoids a hydration mismatch
     setMounted(true);
   }, []);
 

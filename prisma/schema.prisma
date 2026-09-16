@@ -26,6 +26,7 @@ model User {
   fullName     String
   role         UserRole
   active       Boolean  @default(true)
+  trashed      Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

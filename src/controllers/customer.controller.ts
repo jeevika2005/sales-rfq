@@ -6,8 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { handleError, parseJsonBody, sendSuccessResponse } from "@/lib/response";
 import { createCustomerSchema } from "@/validations/customer.validation";
 
-// SIMPLE pattern: Route → Controller → Prisma directly. A plain, unfiltered
-// findMany has no business logic to justify a service layer.
+
 export async function listCustomersController() {
   try {
     await requireAuth();

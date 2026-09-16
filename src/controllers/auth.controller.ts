@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 
 import { HTTP_STATUS, RESPONSE_CODE } from "@/constants";
-import { signIn } from "@/lib/auth";
+import { signIn, signOut } from "@/lib/auth";
 import { handleError, parseJsonBody, sendErrorResponse, sendSuccessResponse } from "@/lib/response";
 import { verifyCredentials } from "@/lib/verify-credentials";
 import { credentialsSchema } from "@/validations/auth.validation";
@@ -27,6 +27,16 @@ export async function loginController(request: NextRequest) {
       RESPONSE_CODE.LOGIN_SUCCESS,
       HTTP_STATUS.OK,
     );
+  } catch (exception) {
+    return handleError(exception, "auth");
+  }
+}
+
+export async function logoutController() {
+  try {
+    await signOut({ redirect: false });
+
+    return sendSuccessResponse(null, "Logged out successfully", RESPONSE_CODE.SUCCESS, HTTP_STATUS.OK);
   } catch (exception) {
     return handleError(exception, "auth");
   }

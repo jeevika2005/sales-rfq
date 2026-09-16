@@ -11,7 +11,7 @@ export async function verifyCredentials(raw: unknown): Promise<AuthenticatedUser
   const { email, password } = parsed.data;
 
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || !user.active) return null;
+  if (!user || !user.active || user.trashed) return null;
 
   const passwordMatches = await bcrypt.compare(password, user.passwordHash);
   if (!passwordMatches) return null;

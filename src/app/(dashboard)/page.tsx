@@ -1,6 +1,6 @@
-import { DashboardKPICards } from "@/components/features/sales/DashboardKPICards";
-import { DashboardCharts } from "@/components/features/sales/DashboardCharts";
-import { DashboardRecentQuotes } from "@/components/features/sales/DashboardRecentQuotes";
+import { DashboardKPICards } from "@/components/features/dashboard/DashboardKPICards";
+import { DashboardCharts } from "@/components/features/dashboard/DashboardCharts";
+import { DashboardRecentQuotes } from "@/components/features/dashboard/DashboardRecentQuotes";
 
 export default function DashboardPage() {
   return (
