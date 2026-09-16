@@ -21,14 +21,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     authorized({ auth, request }) {
-      const isLoggedIn = !!auth?.user;
       const isLoginPage = request.nextUrl.pathname === "/login";
 
       if (isLoginPage) {
-        return isLoggedIn ? Response.redirect(new URL("/", request.nextUrl)) : true;
+        return Response.redirect(new URL("/", request.nextUrl));
       }
 
-      return isLoggedIn;
+      return true; // TEMPORARY BYPASS: Allow access to all routes without login
     },
     jwt({ token, user }) {
       if (user) {
