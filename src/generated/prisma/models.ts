@@ -10,4 +10,8 @@
  */
 export type * from './models/User'
 export type * from './models/Customer'
+export type * from './models/Role'
+export type * from './models/Permission'
+export type * from './models/RolePermission'
+export type * from './models/LeftMenu'
 export type * from './commonInputTypes'
