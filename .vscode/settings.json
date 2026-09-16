@@ -1,0 +1,8 @@
+{
+  "files.exclude": {
+    "src/generated": true
+  },
+  "search.exclude": {
+    "src/generated": true
+  }
+}
