@@ -17,6 +17,7 @@ type LeftMenu = {
   isParent: boolean;
   parentId: string | null;
   parent: { name: string } | null;
+  sortOrder: number;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -115,6 +116,7 @@ export default function LeftMenuPage() {
       url: formData.get("url") || undefined,
       isParent,
       parentId: isParent || !parentId ? undefined : parentId,
+      sortOrder: Number(formData.get("sortOrder")) || 0,
     };
 
     try {
@@ -147,6 +149,7 @@ export default function LeftMenuPage() {
   }
 
   const columns: DataTableColumn<LeftMenu>[] = [
+    { header: "Order", cell: (menu) => <span className="text-muted-foreground">{menu.sortOrder}</span> },
     { header: "Menu Name", cell: (menu) => <span className="font-medium text-foreground">{menu.name}</span> },
     { header: "Menu Key", cell: (menu) => <span className="text-muted-foreground">{menu.menuKey}</span> },
     { header: "URL", cell: (menu) => <span className="text-muted-foreground">{menu.url ?? "—"}</span> },
@@ -290,6 +293,20 @@ export default function LeftMenuPage() {
                   className="rounded-lg border border-border bg-background px-3 py-2 text-[12px] text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card"
                 />
               </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="sortOrder" className="text-[12px] font-medium text-foreground">
+                Sort Order
+              </label>
+              <input
+                id="sortOrder"
+                name="sortOrder"
+                type="number"
+                defaultValue={editingMenu?.sortOrder ?? 0}
+                placeholder="Lower numbers appear first in the sidebar"
+                className="rounded-lg border border-border bg-background px-3 py-2 text-[12px] text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card"
+              />
             </div>
 
             <label className="flex items-center gap-2 text-[12px] font-medium text-foreground">
