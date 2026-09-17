@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Plus, Pencil, Trash2, Power } from "lucide-react";
 
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ActionsMenu, ActionsMenuItem } from "@/components/ui/ActionsMenu";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 
@@ -46,6 +47,7 @@ export default function LeftMenuPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isParentChecked, setIsParentChecked] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<LeftMenu | null>(null);
 
   async function loadMenus() {
     try {
@@ -139,7 +141,7 @@ export default function LeftMenuPage() {
   }
 
   async function handleDelete(menu: LeftMenu) {
-    if (!confirm(`Delete menu "${menu.name}"?`)) return;
+    setConfirmDelete(null);
     await fetch(`/api/left-menu/${menu.id}`, { method: "DELETE" });
     await loadMenus();
   }
@@ -220,7 +222,7 @@ export default function LeftMenuPage() {
               <Power className="h-3.5 w-3.5" />
               Toggle status
             </ActionsMenuItem>
-            <ActionsMenuItem destructive onClick={() => handleDelete(menu)}>
+            <ActionsMenuItem destructive onClick={() => setConfirmDelete(menu)}>
               <Trash2 className="h-3.5 w-3.5" />
               Delete
             </ActionsMenuItem>
@@ -337,6 +339,17 @@ export default function LeftMenuPage() {
             </button>
           </form>
         </Modal>
+      ) : null}
+
+      {confirmDelete ? (
+        <ConfirmDialog
+          title="Delete menu"
+          message={`Delete menu "${confirmDelete.name}"? This cannot be undone.`}
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => handleDelete(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
       ) : null}
     </div>
   );

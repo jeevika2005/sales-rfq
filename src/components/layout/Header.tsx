@@ -52,14 +52,6 @@ export function Header({ title, subtitle }: { title: string; subtitle?: string }
           <HelpCircle className="w-4 h-4" />
         </button>
 
-        {/* Primary Action Button */}
-        <Link
-          href="/quotes/new"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors ml-2"
-        >
-          <Plus className="w-4 h-4" />
-          Add Quote
-        </Link>
       </div>
     </header>
   );
