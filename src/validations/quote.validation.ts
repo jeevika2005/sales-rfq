@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { QUOTE_STATUSES } from "@/types/quote-status";
 
-const valveItemSchema = z.object({
+export const valveItemSchema = z.object({
   id: z.string(),
   valveType: z.string(),
   quantity: z.number(),
@@ -39,3 +39,7 @@ export const updateQuoteSchema = z.object({
 });
 
 export type UpdateQuoteInput = z.infer<typeof updateQuoteSchema>;
+
+export const exportValveItemsSchema = z.object({
+  valveItems: z.array(valveItemSchema).min(1, "At least one valve item is required"),
+});

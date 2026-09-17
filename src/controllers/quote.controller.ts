@@ -4,6 +4,7 @@ import { HTTP_STATUS, RESPONSE_CODE } from "@/constants";
 import { UserRole } from "@/generated/prisma/enums";
 import { requireAuth, requireRole } from "@/lib/guards";
 import { handleError, parseJsonBody, sendSuccessResponse, ValidationError } from "@/lib/response";
+import { buildValveItemsWorkbook, toExportableItems } from "@/services/quote-export.service";
 import {
   createQuote,
   deleteQuote,
@@ -15,7 +16,7 @@ import {
   restoreQuoteVersion,
   updateQuote,
 } from "@/services/quote.service";
-import { createQuoteSchema, updateQuoteSchema } from "@/validations/quote.validation";
+import { createQuoteSchema, exportValveItemsSchema, updateQuoteSchema } from "@/validations/quote.validation";
 
 const WRITE_ROLES = [UserRole.admin, UserRole.manager, UserRole.sales] as const;
 
@@ -32,6 +33,26 @@ export async function listQuotesController() {
   }
 }
 
+export async function exportValveItemsController(request: NextRequest) {
+  try {
+    const session = await requireAuth();
+    requireRole(session.user.role, WRITE_ROLES);
+
+    const input = await parseJsonBody(request, exportValveItemsSchema);
+    const buffer = await buildValveItemsWorkbook(input.valveItems);
+
+    return new Response(new Uint8Array(buffer), {
+      status: HTTP_STATUS.OK,
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": 'attachment; filename="quote-review.xlsx"',
+      },
+    });
+  } catch (exception) {
+    return handleError(exception, "quotes/export");
+  }
+}
+
 export async function createQuoteController(request: NextRequest) {
   try {
     const session = await requireAuth();
@@ -43,6 +64,25 @@ export async function createQuoteController(request: NextRequest) {
     return sendSuccessResponse(quote, "Quote created successfully", RESPONSE_CODE.CREATED, HTTP_STATUS.CREATED);
   } catch (exception) {
     return handleError(exception, "quotes");
+  }
+}
+
+export async function exportQuoteController(quoteId: string) {
+  try {
+    const session = await requireAuth();
+    const quote = await getQuoteForSession(quoteId, session);
+
+    const buffer = await buildValveItemsWorkbook(toExportableItems(quote.items));
+
+    return new Response(new Uint8Array(buffer), {
+      status: HTTP_STATUS.OK,
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${quote.quoteNumber}.xlsx"`,
+      },
+    });
+  } catch (exception) {
+    return handleError(exception, "quotes/export");
   }
 }
 
@@ -140,9 +180,14 @@ export async function restoreQuoteVersionController(quoteId: string, versionPara
     requireRole(session.user.role, WRITE_ROLES);
 
     const version = parseVersionParam(versionParam);
-    const { quote } = await restoreQuoteVersion(quoteId, version, session);
+    const { quote, versionBumped } = await restoreQuoteVersion(quoteId, version, session);
 
-    return sendSuccessResponse(quote, `Restored from version ${version}`, RESPONSE_CODE.SUCCESS, HTTP_STATUS.OK);
+    return sendSuccessResponse(
+      quote,
+      versionBumped ? `Restored from version ${version}` : "No changes — already matches this version",
+      RESPONSE_CODE.SUCCESS,
+      HTTP_STATUS.OK,
+    );
   } catch (exception) {
     return handleError(exception, "quotes");
   }
