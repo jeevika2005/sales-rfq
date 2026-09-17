@@ -17,6 +17,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { useToast } from "@/components/providers/ToastProvider";
+
 const ICON_MAP: Record<string, LucideIcon> = {
   LayoutDashboard,
   FileText,
@@ -45,16 +47,26 @@ function isHrefActive(pathname: string | null, href: string) {
   return pathname === href || (href !== "/" && !!pathname?.startsWith(href));
 }
 
+function initialsFor(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
+}
+
+type Account = { name: string; email: string; role: string };
+
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { showToast } = useToast();
   const [navItems, setNavItems] = useState<MenuItem[]>([]);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [account, setAccount] = useState<Account | null>(null);
 
   async function handleLogout() {
     setIsLoggingOut(true);
     await fetch("/api/auth/logout", { method: "POST" });
+    showToast("success", "Logged out successfully");
     router.push("/login");
     router.refresh();
   }
@@ -65,14 +77,23 @@ export function Sidebar() {
       .then((result) => {
         if (result.success) setNavItems(result.data);
       });
+    fetch("/api/auth/me")
+      .then((response) => response.json())
+      .then((result) => {
+        if (result.success) setAccount(result.data);
+      });
   }, []);
 
+  // Sidebar only ever shows Dashboard + RFQ List — everything else
+  // (Customers, Administration and its children) lives in the header's
+  // Settings dropdown instead. See Header.tsx.
   const { standaloneItems, parentGroups } = useMemo(() => {
-    const parents = navItems.filter((item) => item.isParent);
-    const standalone = navItems.filter((item) => !item.isParent && !item.parentId);
+    const sidebarItems = navItems.filter((item) => item.menuKey === "dashboard" || item.menuKey === "quotes");
+    const parents = sidebarItems.filter((item) => item.isParent);
+    const standalone = sidebarItems.filter((item) => !item.isParent && !item.parentId);
     const groups = parents.map((parent) => ({
       parent,
-      children: navItems.filter((item) => item.parentId === parent.id),
+      children: sidebarItems.filter((item) => item.parentId === parent.id),
     }));
     return { standaloneItems: standalone, parentGroups: groups };
   }, [navItems]);
@@ -89,7 +110,7 @@ export function Sidebar() {
 
   return (
     <div className="w-64 bg-card border-r border-border h-full flex flex-col flex-shrink-0">
-      <div className="p-6 border-b border-border">
+      <div className="h-16 flex items-center px-6 border-b border-border shrink-0">
         <h1 className="text-xl font-bold tracking-tight text-primary flex items-center gap-2">
           <div className="w-8 h-8 rounded bg-primary text-primary-foreground flex items-center justify-center font-bold">
             IO
@@ -162,17 +183,38 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t border-border p-4">
-        <button
-          type="button"
-          onClick={handleLogout}
-          disabled={isLoggingOut}
-          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <LogOut className="h-4 w-4" />
-          <span className="font-medium">{isLoggingOut ? "Signing out…" : "Logout"}</span>
-        </button>
-        <p className="mt-2 px-3 text-xs text-muted-foreground">Indigo Ops &copy; 2026</p>
+      <div className="border-t border-border p-3">
+        {account ? (
+          <div className="flex items-center gap-2.5 rounded-md px-1 py-1.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+              {initialsFor(account.name)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-medium text-foreground">{account.name}</p>
+              <p className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">{account.role}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              title="Logout"
+              className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="font-medium">{isLoggingOut ? "Signing out…" : "Logout"}</span>
+          </button>
+        )}
+        <p className="mt-2 px-1 text-[11px] text-muted-foreground">Sales RFQ &copy; 2026</p>
       </div>
     </div>
   );

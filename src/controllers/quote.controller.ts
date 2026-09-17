@@ -4,7 +4,7 @@ import { HTTP_STATUS, RESPONSE_CODE } from "@/constants";
 import { UserRole } from "@/generated/prisma/enums";
 import { requireAuth, requireRole } from "@/lib/guards";
 import { handleError, parseJsonBody, sendSuccessResponse, ValidationError } from "@/lib/response";
-import { buildValveItemsWorkbook, toExportableItems } from "@/services/quote-export.service";
+import { buildQuoteWorkbook, toExportableItems } from "@/services/quote-export.service";
 import {
   createQuote,
   deleteQuote,
@@ -39,7 +39,17 @@ export async function exportValveItemsController(request: NextRequest) {
     requireRole(session.user.role, WRITE_ROLES);
 
     const input = await parseJsonBody(request, exportValveItemsSchema);
-    const buffer = await buildValveItemsWorkbook(input.valveItems);
+    const buffer = await buildQuoteWorkbook(
+      {
+        customerName: input.customerName,
+        customerEmail: input.customerEmail,
+        deliveryDate: input.deliveryDate,
+        notes: input.notes,
+        sourceFileName: input.sourceFileName,
+        sourceType: input.sourceType,
+      },
+      input.valveItems,
+    );
 
     return new Response(new Uint8Array(buffer), {
       status: HTTP_STATUS.OK,
@@ -72,13 +82,29 @@ export async function exportQuoteController(quoteId: string) {
     const session = await requireAuth();
     const quote = await getQuoteForSession(quoteId, session);
 
-    const buffer = await buildValveItemsWorkbook(toExportableItems(quote.items));
+    const buffer = await buildQuoteWorkbook(
+      {
+        quoteNumber: quote.quoteNumber,
+        customerName: quote.customerName,
+        customerEmail: quote.customerEmail ?? undefined,
+        deliveryDate: quote.deliveryDate ?? undefined,
+        notes: quote.notes ?? undefined,
+        sourceFileName: quote.attachments[0]?.fileName,
+        sourceType: "quote",
+      },
+      toExportableItems(quote.items),
+    );
+
+    // §FR-6 filename convention: {quoteNumber}_{customer}_{YYYYMMDD}.xlsx
+    const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const customerSlug = quote.customerName.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const filename = `${quote.quoteNumber}_${customerSlug}_${datePart}.xlsx`;
 
     return new Response(new Uint8Array(buffer), {
       status: HTTP_STATUS.OK,
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="${quote.quoteNumber}.xlsx"`,
+        "Content-Disposition": `attachment; filename="${filename}"`,
       },
     });
   } catch (exception) {

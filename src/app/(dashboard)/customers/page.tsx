@@ -6,6 +6,7 @@ import { Plus, Building2, Pencil, Archive, ArchiveRestore } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { ActionsMenu, ActionsMenuItem } from "@/components/ui/ActionsMenu";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
+import { useToast } from "@/components/providers/ToastProvider";
 
 type Customer = {
   id: string;
@@ -21,6 +22,7 @@ type Customer = {
 const PAGE_SIZE = 10;
 
 export default function CustomersPage() {
+  const { showToast } = useToast();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +109,7 @@ export default function CustomersPage() {
       const result = await response.json();
       if (!result.success) throw new Error(result.message);
 
+      showToast("success", editingCustomer ? "Customer updated successfully" : "Customer created successfully");
       setIsModalOpen(false);
       await loadCustomers();
     } catch (exception) {
@@ -128,6 +131,7 @@ export default function CustomersPage() {
       setActionError(result.message);
       return;
     }
+    showToast("success", customer.archived ? "Customer unarchived" : "Customer archived");
     await loadCustomers();
   }
 
