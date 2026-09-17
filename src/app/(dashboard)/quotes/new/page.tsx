@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, Loader2, Plus, FileText, Upload, FileSpreadsheet } from "lucide-react";
+import { Sparkles, Loader2, Plus, FileText, Upload } from "lucide-react";
 
 import { Modal } from "@/components/ui/Modal";
 import { ValveItemsEditor, makeLineId, type ValveItemForm } from "@/components/features/quotes/ValveItemsEditor";
+import { useToast } from "@/components/providers/ToastProvider";
 
 type Customer = {
   id: string;
@@ -35,6 +36,7 @@ function fileToBase64(file: File): Promise<string> {
 
 export default function NewQuotePage() {
   const router = useRouter();
+  const { showToast } = useToast();
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerId, setCustomerId] = useState("");
@@ -42,7 +44,6 @@ export default function NewQuotePage() {
   const [currency, setCurrency] = useState("USD");
   const [notes, setNotes] = useState("");
 
-  const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [newCustomerError, setNewCustomerError] = useState<string | null>(null);
 
@@ -55,8 +56,6 @@ export default function NewQuotePage() {
   const [parseError, setParseError] = useState<string | null>(null);
 
   const [items, setItems] = useState<ValveItemForm[]>([]);
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -101,7 +100,6 @@ export default function NewQuotePage() {
 
       await loadCustomers();
       setCustomerId(result.data.id);
-      setIsNewCustomerModalOpen(false);
     } catch (exception) {
       setNewCustomerError(exception instanceof Error ? exception.message : "Could not create customer.");
     } finally {
@@ -168,47 +166,6 @@ export default function NewQuotePage() {
     }
   }
 
-  async function handleExportExcel() {
-    setExportError(null);
-    if (items.length === 0) {
-      setExportError("Add at least one valve item first.");
-      return;
-    }
-
-    setIsExporting(true);
-    try {
-      const response = await fetch("/api/quotes/export", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          valveItems: items.map((item) => ({
-            id: item.id,
-            valveType: item.valveType,
-            quantity: item.quantity,
-            ...(item.unitPrice !== undefined ? { unitPrice: item.unitPrice } : {}),
-            attributes: item.attributes,
-          })),
-        }),
-      });
-      if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.message);
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "quote-review.xlsx";
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch (exception) {
-      setExportError(exception instanceof Error ? exception.message : "Export failed.");
-    } finally {
-      setIsExporting(false);
-    }
-  }
-
   async function handleCreateQuote() {
     setSaveError(null);
 
@@ -243,7 +200,19 @@ export default function NewQuotePage() {
       const result = await response.json();
       if (!result.success) throw new Error(result.message);
 
-      router.push(`/quotes/${result.data.id}`);
+      const quoteId = result.data.id;
+
+      // The file used for AI parsing IS the RFQ source — persist it so it
+      // can be viewed/downloaded later from the quotes list and detail page.
+      if (file && mode !== "text") {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("kind", "rfq_source");
+        await fetch(`/api/quotes/${quoteId}/attachments`, { method: "POST", body: formData });
+      }
+
+      showToast("success", `Quote ${result.data.quoteNumber} created successfully`);
+      router.push(`/quotes/${quoteId}`);
     } catch (exception) {
       setSaveError(exception instanceof Error ? exception.message : "Could not create quote.");
       setIsSaving(false);
@@ -268,16 +237,7 @@ export default function NewQuotePage() {
               <label htmlFor="customerId" className="text-[12px] font-medium text-foreground">
                 Customer <span className="text-destructive">*</span>
               </label>
-              <button
-                type="button"
-                onClick={() => {
-                  setNewCustomerError(null);
-                  setIsNewCustomerModalOpen(true);
-                }}
-                className="text-[11px] font-medium text-primary hover:underline"
-              >
-                + New Customer
-              </button>
+    
             </div>
             <select
               id="customerId"
@@ -415,7 +375,18 @@ export default function NewQuotePage() {
         </div>
       </div>
 
-      <ValveItemsEditor items={items} onChange={setItems} />
+      <ValveItemsEditor
+        items={items}
+        onChange={setItems}
+        exportContext={{
+          customerName: customers.find((customer) => customer.id === customerId)?.name,
+          customerEmail: customers.find((customer) => customer.id === customerId)?.email ?? undefined,
+          deliveryDate,
+          notes,
+          sourceFileName: mode === "text" ? undefined : file?.name,
+          sourceType: mode,
+        }}
+      />
 
       {/* Footer */}
       <div className="flex items-center justify-between rounded-[8px] border border-border bg-card p-6 shadow-sm">
@@ -429,17 +400,7 @@ export default function NewQuotePage() {
           </span>
         </div>
         <div className="flex items-center gap-3">
-          {exportError ? <p className="text-[11px] text-destructive">{exportError}</p> : null}
           {saveError ? <p className="text-[11px] text-destructive">{saveError}</p> : null}
-          <button
-            type="button"
-            onClick={handleExportExcel}
-            disabled={isExporting}
-            className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-[12px] font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />}
-            Export to Excel
-          </button>
           <button
             type="button"
             onClick={handleCreateQuote}
@@ -452,68 +413,7 @@ export default function NewQuotePage() {
         </div>
       </div>
 
-      {isNewCustomerModalOpen ? (
-        <Modal title="New Customer" onClose={() => setIsNewCustomerModalOpen(false)}>
-          <form onSubmit={handleCreateCustomer} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="newCustomerName" className="text-[12px] font-medium text-foreground">
-                Name
-              </label>
-              <input
-                id="newCustomerName"
-                name="name"
-                type="text"
-                required
-                placeholder="e.g. Acme Industries"
-                className="rounded-lg border border-border bg-background px-3 py-2 text-[12px] text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="newCustomerEmail" className="text-[12px] font-medium text-foreground">
-                Email
-              </label>
-              <input
-                id="newCustomerEmail"
-                name="email"
-                type="email"
-                placeholder="buyer@company.com"
-                className="rounded-lg border border-border bg-background px-3 py-2 text-[12px] text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="newCustomerPhone" className="text-[12px] font-medium text-foreground">
-                Phone
-              </label>
-              <input
-                id="newCustomerPhone"
-                name="phone"
-                type="text"
-                placeholder="+1 555 000 0000"
-                className="rounded-lg border border-border bg-background px-3 py-2 text-[12px] text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card"
-              />
-            </div>
-
-            {newCustomerError ? (
-              <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-[11px] text-destructive">
-                {newCustomerError}
-              </p>
-            ) : null}
-
-            <button
-              type="submit"
-              disabled={isCreatingCustomer}
-              className="mt-2 rounded-lg bg-primary py-2.5 text-[12px] font-semibold text-primary-foreground shadow-sm shadow-primary/30 transition-opacity duration-150 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isCreatingCustomer ? "Creating…" : (
-                <span className="inline-flex items-center justify-center gap-1.5">
-                  <Plus className="h-3.5 w-3.5" />
-                  Create customer
-                </span>
-              )}
-            </button>
-          </form>
-        </Modal>
-      ) : null}
+ 
     </div>
   );
 }

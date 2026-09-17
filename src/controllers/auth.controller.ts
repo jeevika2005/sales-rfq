@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 
 import { HTTP_STATUS, RESPONSE_CODE } from "@/constants";
 import { signIn, signOut } from "@/lib/auth";
+import { requireAuth } from "@/lib/guards";
 import { handleError, parseJsonBody, sendErrorResponse, sendSuccessResponse } from "@/lib/response";
 import { verifyCredentials } from "@/lib/verify-credentials";
 import { credentialsSchema } from "@/validations/auth.validation";
@@ -25,6 +26,21 @@ export async function loginController(request: NextRequest) {
       { user },
       "Login successful",
       RESPONSE_CODE.LOGIN_SUCCESS,
+      HTTP_STATUS.OK,
+    );
+  } catch (exception) {
+    return handleError(exception, "auth");
+  }
+}
+
+export async function meController() {
+  try {
+    const session = await requireAuth();
+
+    return sendSuccessResponse(
+      { name: session.user.name, email: session.user.email, role: session.user.role },
+      "Session fetched successfully",
+      RESPONSE_CODE.SUCCESS,
       HTTP_STATUS.OK,
     );
   } catch (exception) {

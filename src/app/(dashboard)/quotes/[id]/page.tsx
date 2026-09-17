@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Check, FileText, Loader2, Pencil, X } from "lucide-react";
+import { ArrowLeft, Check, FileText, Loader2, Paperclip, Pencil, X } from "lucide-react";
 
+import { useToast } from "@/components/providers/ToastProvider";
 import { ActivityLogPanel, VersionHistoryPanel } from "@/components/features/quotes/HistoryPanels";
 import { ValveItemsEditor, makeLineId, type ValveItemForm } from "@/components/features/quotes/ValveItemsEditor";
 import { ALLOWED_STATUS_TRANSITIONS, QUOTE_STATUS_ACTIONS, QUOTE_STATUS_PIPELINE, QUOTE_STATUS_STYLES } from "@/lib/quote-ui";
+import { VALVE_TYPES } from "@/types/valve";
 
 type Customer = {
   id: string;
@@ -47,6 +49,7 @@ type QuoteDetail = {
   createdAt: string;
   updatedAt: string;
   items: QuoteItem[];
+  attachments: { id: string; fileName: string }[];
 };
 
 // Reconstructs the editable form shape from a persisted QuoteItem — its
@@ -65,9 +68,32 @@ function quoteItemToForm(item: QuoteItem): ValveItemForm {
   return { id: lineId, valveType, quantity: item.quantity, unitPrice: item.unitPrice, attributes };
 }
 
+// §FR4.6 — valve tables grouped by type, one table per type. VALVE_TYPES
+// order first, then any custom/unrecognized type strings.
+function groupItemsByType(items: QuoteItem[]): { valveType: string; items: QuoteItem[] }[] {
+  const byType = new Map<string, QuoteItem[]>();
+  for (const item of items) {
+    const valveType =
+      typeof item.attributes.valveType === "string" ? item.attributes.valveType : item.itemName;
+    const list = byType.get(valveType) ?? [];
+    list.push(item);
+    byType.set(valveType, list);
+  }
+
+  const ordered: { valveType: string; items: QuoteItem[] }[] = [];
+  for (const type of VALVE_TYPES) {
+    const groupItems = byType.get(type);
+    if (groupItems?.length) ordered.push({ valveType: type, items: groupItems });
+    byType.delete(type);
+  }
+  for (const [valveType, groupItems] of byType) ordered.push({ valveType, items: groupItems });
+  return ordered;
+}
+
 export default function QuoteDetailPage() {
   const params = useParams<{ id: string }>();
   const quoteId = params.id;
+  const { showToast } = useToast();
 
   const [quote, setQuote] = useState<QuoteDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -169,6 +195,7 @@ export default function QuoteDetailPage() {
 
       setQuote(result.data);
       setEditMessage(result.message);
+      showToast("success", result.message);
       setIsEditing(false);
       setRefreshToken((token) => token + 1);
     } catch (exception) {
@@ -190,6 +217,7 @@ export default function QuoteDetailPage() {
       const result = await response.json();
       if (!result.success) throw new Error(result.message);
       setQuote(result.data);
+      showToast("success", `Status updated to ${nextStatus}`);
       setRefreshToken((token) => token + 1);
     } catch (exception) {
       setTransitionError(exception instanceof Error ? exception.message : "Could not update status.");
@@ -436,7 +464,16 @@ export default function QuoteDetailPage() {
             </div>
           </div>
 
-          <ValveItemsEditor items={editItems} onChange={setEditItems} />
+          <ValveItemsEditor
+            items={editItems}
+            onChange={setEditItems}
+            exportContext={{
+              customerName: customers.find((customer) => customer.id === editCustomerId)?.name,
+              deliveryDate: editDeliveryDate,
+              notes: editNotes,
+              sourceFileName: quote.attachments?.[0]?.fileName,
+            }}
+          />
 
           <div className="flex items-center justify-end gap-3 rounded-[8px] border border-border bg-card p-6 shadow-sm">
             {editError ? <p className="text-[11px] text-destructive">{editError}</p> : null}
@@ -488,6 +525,20 @@ export default function QuoteDetailPage() {
                 <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Created</p>
                 <p className="mt-1 text-[12px] text-foreground">{new Date(quote.createdAt).toLocaleString()}</p>
               </div>
+              <div>
+                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Source Document</p>
+                {quote.attachments?.[0] ? (
+                  <a
+                    href={`/api/quotes/${quote.id}/attachments/${quote.attachments[0].id}`}
+                    className="mt-1 inline-flex items-center gap-1.5 text-[12px] text-primary hover:underline"
+                  >
+                    <Paperclip className="h-3.5 w-3.5" />
+                    {quote.attachments[0].fileName}
+                  </a>
+                ) : (
+                  <p className="mt-1 text-[12px] text-muted-foreground">—</p>
+                )}
+              </div>
             </div>
             {quote.notes ? (
               <div className="mt-4 border-t border-border pt-4">
@@ -497,37 +548,44 @@ export default function QuoteDetailPage() {
             ) : null}
           </div>
 
-          {/* Valve items */}
-          <div className="rounded-[8px] border border-border bg-card p-6 shadow-sm">
-            <h3 className="mb-4 text-sm font-semibold text-foreground">Valve Items</h3>
-            <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full text-left text-xs">
-                <thead className="border-b border-border bg-muted/50 uppercase text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-2 font-medium">Item</th>
-                    <th className="px-4 py-2 font-medium">Specification</th>
-                    <th className="px-4 py-2 font-medium">Qty</th>
-                    <th className="px-4 py-2 font-medium">Unit Price</th>
-                    <th className="px-4 py-2 font-medium">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {quote.items.map((item) => (
-                    <tr key={item.id}>
-                      <td className="flex items-center gap-2 px-4 py-3">
-                        <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <span className="font-medium text-foreground">{item.itemName}</span>
-                      </td>
-                      <td className="max-w-xs px-4 py-3 text-muted-foreground">{item.specification ?? "—"}</td>
-                      <td className="px-4 py-3 text-foreground">{item.quantity}</td>
-                      <td className="px-4 py-3 text-foreground">{item.unitPrice.toFixed(2)}</td>
-                      <td className="px-4 py-3 font-medium text-foreground">{item.totalPrice.toFixed(2)}</td>
+          {/* Valve items — §FR4.6: grouped by type, one table per type */}
+          {groupItemsByType(quote.items).map((group) => (
+            <div key={group.valveType} className="rounded-[8px] border border-border bg-card p-6 shadow-sm">
+              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-foreground">
+                {group.valveType}{" "}
+                <span className="font-normal normal-case text-muted-foreground">
+                  ({group.items.length} item{group.items.length === 1 ? "" : "s"})
+                </span>
+              </h3>
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table className="w-full text-left text-xs">
+                  <thead className="sticky top-0 border-b border-border bg-muted/50 uppercase text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-2 font-medium">Item</th>
+                      <th className="px-4 py-2 font-medium">Specification</th>
+                      <th className="px-4 py-2 font-medium">Qty</th>
+                      <th className="px-4 py-2 font-medium">Unit Price</th>
+                      <th className="px-4 py-2 font-medium">Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {group.items.map((item) => (
+                      <tr key={item.id}>
+                        <td className="flex items-center gap-2 px-4 py-3">
+                          <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          <span className="font-medium text-foreground">{item.itemName}</span>
+                        </td>
+                        <td className="max-w-xs px-4 py-3 text-muted-foreground">{item.specification ?? "—"}</td>
+                        <td className="px-4 py-3 text-foreground">{item.quantity}</td>
+                        <td className="px-4 py-3 text-foreground">{item.unitPrice.toFixed(2)}</td>
+                        <td className="px-4 py-3 font-medium text-foreground">{item.totalPrice.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          ))}
         </>
       )}
 

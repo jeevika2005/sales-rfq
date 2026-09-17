@@ -42,4 +42,10 @@ export type UpdateQuoteInput = z.infer<typeof updateQuoteSchema>;
 
 export const exportValveItemsSchema = z.object({
   valveItems: z.array(valveItemSchema).min(1, "At least one valve item is required"),
+  customerName: z.string().trim().optional(),
+  customerEmail: z.string().trim().optional(),
+  deliveryDate: z.string().trim().optional(),
+  notes: z.string().trim().optional(),
+  sourceFileName: z.string().trim().optional(),
+  sourceType: z.enum(["pdf", "excel", "text"]).default("text"),
 });

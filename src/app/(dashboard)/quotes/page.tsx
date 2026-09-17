@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, FileText } from "lucide-react";
+import { Paperclip, Plus, FileText } from "lucide-react";
 
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import { QUOTE_STATUS_STYLES } from "@/lib/quote-ui";
@@ -15,6 +15,7 @@ type Quote = {
   currency: string;
   totalAmount: number;
   createdAt: string;
+  attachments: { id: string; fileName: string }[];
 };
 
 const PAGE_SIZE = 10;
@@ -97,6 +98,23 @@ export default function QuotesPage() {
       cell: (quote) => (
         <span className="text-muted-foreground">{new Date(quote.createdAt).toLocaleDateString()}</span>
       ),
+    },
+    {
+      header: "Source Doc",
+      cell: (quote) =>
+        quote.attachments?.[0] ? (
+          <a
+            href={`/api/quotes/${quote.id}/attachments/${quote.attachments[0].id}`}
+            onClick={(event) => event.stopPropagation()}
+            title={quote.attachments[0].fileName}
+            className="inline-flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-primary hover:underline"
+          >
+            <Paperclip className="h-3.5 w-3.5" />
+            <span className="max-w-[10rem] truncate">{quote.attachments[0].fileName}</span>
+          </a>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
     },
   ];
 

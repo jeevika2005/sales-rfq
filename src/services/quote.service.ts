@@ -130,7 +130,7 @@ export async function createQuote(input: CreateQuoteInput, userId: string) {
         updatedBy: userId,
         items: { create: itemsData },
       },
-      include: { items: true },
+      include: { items: true, ...SOURCE_ATTACHMENT_INCLUDE },
     });
 
     await tx.quoteVersion.create({
@@ -157,6 +157,17 @@ export async function createQuote(input: CreateQuoteInput, userId: string) {
   });
 }
 
+// The uploaded RFQ source doc, if one was attached — surfaced on both the
+// list and detail views as a download link. Only ever 0 or 1 per quote in
+// practice (auto-attached once, at creation).
+const SOURCE_ATTACHMENT_INCLUDE = {
+  attachments: {
+    where: { kind: "rfq_source" as const },
+    take: 1,
+    orderBy: { createdAt: "asc" as const },
+  },
+};
+
 // Same §3.1 scope rule as getQuoteForSession, applied to the list view.
 export async function listQuotesForSession(session: Session) {
   const isPrivileged = session.user.role === UserRole.admin || session.user.role === UserRole.manager;
@@ -164,13 +175,17 @@ export async function listQuotesForSession(session: Session) {
   return prisma.quote.findMany({
     where: isPrivileged ? {} : { createdBy: session.user.id },
     orderBy: { createdAt: "desc" },
+    include: SOURCE_ATTACHMENT_INCLUDE,
   });
 }
 
 // §3.1 Data scope: admin/manager see all quotes; sales/viewer only their
 // own (createdBy = session.user.id). Shared by GET detail and PATCH.
 export async function getQuoteForSession(quoteId: string, session: Session) {
-  const quote = await prisma.quote.findUnique({ where: { id: quoteId }, include: { items: true } });
+  const quote = await prisma.quote.findUnique({
+    where: { id: quoteId },
+    include: { items: true, ...SOURCE_ATTACHMENT_INCLUDE },
+  });
   if (!quote) throw new NotFoundError("Quote not found");
 
   const isPrivileged = session.user.role === UserRole.admin || session.user.role === UserRole.manager;
@@ -352,7 +367,7 @@ async function applyNewVersion(
         updatedBy: session.user.id,
         items: { create: itemsData },
       },
-      include: { items: true },
+      include: { items: true, ...SOURCE_ATTACHMENT_INCLUDE },
     });
 
     await tx.quoteVersion.create({

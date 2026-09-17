@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ChevronDown, History, Loader2, Minus, Pencil, Plus, RotateCcw, ScrollText } from "lucide-react";
 
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/components/providers/ToastProvider";
 
 type SnapshotItem = {
   id: string;
@@ -87,6 +88,7 @@ export function VersionHistoryPanel({
   onRestored: () => void;
   refreshToken?: number;
 }) {
+  const { showToast } = useToast();
   const [versions, setVersions] = useState<VersionRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -124,6 +126,7 @@ export function VersionHistoryPanel({
       const result = await response.json();
       if (!result.success) throw new Error(result.message);
 
+      showToast("success", result.message);
       await loadVersions();
       onRestored();
     } catch (exception) {
