@@ -208,6 +208,7 @@ model LeftMenu {
   icon     String?
   url      String?
   isParent Boolean @default(false)
+  sortOrder Int    @default(0)
 
   parentId String?    @db.Uuid
   parent   LeftMenu?  @relation("LeftMenuParent", fields: [parentId], references: [id], onDelete: SetNull)
