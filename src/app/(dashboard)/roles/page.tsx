@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, ShieldCheck, Pencil, Power, Trash2, KeyRound } from "lucide-react";
 
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ActionsMenu, ActionsMenuItem } from "@/components/ui/ActionsMenu";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 
@@ -33,6 +34,7 @@ export default function RolesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<Role | null>(null);
 
   async function loadRoles() {
     try {
@@ -107,7 +109,7 @@ export default function RolesPage() {
   }
 
   async function handleDelete(role: Role) {
-    if (!confirm(`Delete role "${role.name}"?`)) return;
+    setConfirmDelete(null);
     await fetch(`/api/roles/${role.id}`, { method: "DELETE" });
     await loadRoles();
   }
@@ -196,7 +198,7 @@ export default function RolesPage() {
               <Power className="h-3.5 w-3.5" />
               Toggle status
             </ActionsMenuItem>
-            <ActionsMenuItem destructive onClick={() => handleDelete(role)}>
+            <ActionsMenuItem destructive onClick={() => setConfirmDelete(role)}>
               <Trash2 className="h-3.5 w-3.5" />
               Delete
             </ActionsMenuItem>
@@ -256,6 +258,17 @@ export default function RolesPage() {
             </button>
           </form>
         </Modal>
+      ) : null}
+
+      {confirmDelete ? (
+        <ConfirmDialog
+          title="Delete role"
+          message={`Delete role "${confirmDelete.name}"? This cannot be undone.`}
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => handleDelete(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
       ) : null}
     </div>
   );

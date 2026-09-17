@@ -42,3 +42,6 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# locally-stored attachment files (dev/small-deployment storage — see src/lib/storage.ts)
+/storage/

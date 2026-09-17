@@ -49,6 +49,24 @@ export class ConflictError extends AppError {
   }
 }
 
+export class RateLimitedError extends AppError {
+  constructor(message = "Too many requests — try again shortly") {
+    super(message, HTTP_STATUS.TOO_MANY_REQUESTS, RESPONSE_CODE.RATE_LIMITED);
+  }
+}
+
+export class ExtractionError extends AppError {
+  constructor(message = "No valve specifications could be extracted") {
+    super(message, HTTP_STATUS.UNPROCESSABLE_ENTITY, RESPONSE_CODE.EXTRACTION_FAILED);
+  }
+}
+
+export class PayloadTooLargeError extends AppError {
+  constructor(message = "File is too large") {
+    super(message, HTTP_STATUS.PAYLOAD_TOO_LARGE, RESPONSE_CODE.PAYLOAD_TOO_LARGE);
+  }
+}
+
 // ---- logger ----
 
 export const logger = {
@@ -106,9 +124,8 @@ export function handleError(exception: unknown, scope = "api") {
 
   if (exception instanceof ZodError) {
     const firstIssue = exception.issues[0];
-    const message = firstIssue
-      ? `${firstIssue.path.join(".")}: ${firstIssue.message}`
-      : "Validation failed";
+    const path = firstIssue?.path.join(".");
+    const message = firstIssue ? (path ? `${path}: ${firstIssue.message}` : firstIssue.message) : "Validation failed";
     return sendErrorResponse(message, RESPONSE_CODE.VALIDATION_ERROR, HTTP_STATUS.BAD_REQUEST);
   }
 
@@ -132,3 +149,4 @@ export function handleError(exception: unknown, scope = "api") {
     HTTP_STATUS.INTERNAL_SERVER_ERROR,
   );
 }
+
