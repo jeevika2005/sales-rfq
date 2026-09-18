@@ -24,7 +24,7 @@ export function ActionsMenu({ children }: { children: ReactNode }) {
         onClick={() => setIsOpen((open) => !open)}
         className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
       >
-        <MoreVertical className="h-4 w-4" />
+          <MoreVertical className="h-4 w-4" />
       </button>
       {isOpen ? (
         <div
