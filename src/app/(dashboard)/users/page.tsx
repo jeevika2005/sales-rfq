@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Plus, UserCog, Pencil, Power, Trash2 } from "lucide-react";
 
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ActionsMenu, ActionsMenuItem } from "@/components/ui/ActionsMenu";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 
@@ -32,6 +33,8 @@ export default function UsersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<User | null>(null);
 
   async function loadUsers() {
     try {
@@ -109,21 +112,23 @@ export default function UsersPage() {
   }
 
   async function handleToggleStatus(user: User) {
+    setActionError(null);
     const response = await fetch(`/api/users/${user.id}/status`, { method: "PATCH" });
     const result = await response.json();
     if (!result.success) {
-      alert(result.message);
+      setActionError(result.message);
       return;
     }
     await loadUsers();
   }
 
   async function handleDelete(user: User) {
-    if (!confirm(`Delete user "${user.fullName}"?`)) return;
+    setConfirmDelete(null);
+    setActionError(null);
     const response = await fetch(`/api/users/${user.id}`, { method: "DELETE" });
     const result = await response.json();
     if (!result.success) {
-      alert(result.message);
+      setActionError(result.message);
       return;
     }
     await loadUsers();
@@ -184,6 +189,12 @@ export default function UsersPage() {
         </button>
       </div>
 
+      {actionError ? (
+        <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-[11px] text-destructive">
+          {actionError}
+        </p>
+      ) : null}
+
       <DataTable
         data={pagedUsers}
         columns={columns}
@@ -209,7 +220,7 @@ export default function UsersPage() {
               <Power className="h-3.5 w-3.5" />
               Toggle status
             </ActionsMenuItem>
-            <ActionsMenuItem destructive onClick={() => handleDelete(user)}>
+            <ActionsMenuItem destructive onClick={() => setConfirmDelete(user)}>
               <Trash2 className="h-3.5 w-3.5" />
               Delete
             </ActionsMenuItem>
@@ -299,6 +310,17 @@ export default function UsersPage() {
             </button>
           </form>
         </Modal>
+      ) : null}
+
+      {confirmDelete ? (
+        <ConfirmDialog
+          title="Delete user"
+          message={`Delete user "${confirmDelete.fullName}"? This cannot be undone.`}
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => handleDelete(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
       ) : null}
     </div>
   );

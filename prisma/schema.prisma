@@ -30,7 +30,12 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  customers    Customer[]
+  customers     Customer[]
+  createdQuotes Quote[]        @relation("QuoteCreatedBy")
+  updatedQuotes Quote[]        @relation("QuoteUpdatedBy")
+  quoteVersions QuoteVersion[] @relation("QuoteVersionCreatedBy")
+  attachments   Attachment[]   @relation("AttachmentCreatedBy")
+  auditLogs     AuditLog[]
 }
 
 model Customer {
@@ -40,12 +45,122 @@ model Customer {
   phone       String?
   companyCode String?
   notes       String?
+  archived    Boolean  @default(false)
   createdBy   String?  @db.Uuid
   creator     User?    @relation(fields: [createdBy], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  quotes Quote[]
+
   @@index([name])
+}
+
+model Quote {
+  id          String @id @default(uuid()) @db.Uuid
+  quoteNumber String @unique
+
+  customerId    String?   @db.Uuid
+  customer      Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerName  String
+  customerEmail String?
+  customerPhone String?
+
+  status       String  @default("draft")
+  currency     String  @default("USD")
+  totalAmount  Float   @default(0)
+  deliveryDate String?
+  notes        String?
+  attributes   Json
+
+  currentVersion Int @default(1)
+
+  createdBy String? @db.Uuid
+  creator   User?   @relation("QuoteCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedBy String? @db.Uuid
+  updater   User?   @relation("QuoteUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items       QuoteItem[]
+  versions    QuoteVersion[]
+  attachments Attachment[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([customerId])
+  @@index([createdBy])
+}
+
+model QuoteItem {
+  id      String @id @default(uuid()) @db.Uuid
+  quoteId String @db.Uuid
+  quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  itemName      String
+  componentType String?
+  material      String?
+  specification String?
+  manufacturer  String?
+  partNumber    String?
+  quantity      Float   @default(1)
+  unitPrice     Float   @default(0)
+  totalPrice    Float
+  leadTimeDays  Int     @default(0)
+  notes         String?
+  attributes    Json
+}
+
+model QuoteVersion {
+  id                 String  @id @default(uuid()) @db.Uuid
+  quoteId            String  @db.Uuid
+  quote              Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  version            Int
+  snapshotJson       Json
+  changesSummaryJson Json?
+  changeNotes        String?
+
+  createdBy String?  @db.Uuid
+  creator   User?    @relation("QuoteVersionCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@unique([quoteId, version])
+}
+
+enum AttachmentKind {
+  rfq_source
+  spec_doc
+  export
+}
+
+model Attachment {
+  id         String         @id @default(uuid()) @db.Uuid
+  quoteId    String?        @db.Uuid
+  quote      Quote?         @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  kind       AttachmentKind
+  fileName   String
+  mimeType   String
+  byteSize   Int
+  storageKey String
+
+  createdBy String?  @db.Uuid
+  creator   User?    @relation("AttachmentCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @db.Uuid
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([userId])
 }
 
 enum DataScope {
@@ -55,15 +170,15 @@ enum DataScope {
 }
 
 model Role {
-  id          String   @id @default(uuid()) @db.Uuid
-  name        String   @unique
-  dataScope   DataScope
-  active      Boolean  @default(true)
-  trashed     Boolean  @default(false)
-  createdBy   String   @db.Uuid
-  updatedBy   String?  @db.Uuid
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String    @unique
+  dataScope DataScope
+  active    Boolean   @default(true)
+  trashed   Boolean   @default(false)
+  createdBy String    @db.Uuid
+  updatedBy String?   @db.Uuid
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   rolePermissions RolePermission[]
 
@@ -93,6 +208,7 @@ model LeftMenu {
   icon     String?
   url      String?
   isParent Boolean @default(false)
+  sortOrder Int    @default(0)
 
   parentId String?    @db.Uuid
   parent   LeftMenu?  @relation("LeftMenuParent", fields: [parentId], references: [id], onDelete: SetNull)

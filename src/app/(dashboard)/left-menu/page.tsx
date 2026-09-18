@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Plus, Pencil, Trash2, Power } from "lucide-react";
 
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ActionsMenu, ActionsMenuItem } from "@/components/ui/ActionsMenu";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 
@@ -16,6 +17,7 @@ type LeftMenu = {
   isParent: boolean;
   parentId: string | null;
   parent: { name: string } | null;
+  sortOrder: number;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -46,6 +48,7 @@ export default function LeftMenuPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isParentChecked, setIsParentChecked] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<LeftMenu | null>(null);
 
   async function loadMenus() {
     try {
@@ -113,6 +116,7 @@ export default function LeftMenuPage() {
       url: formData.get("url") || undefined,
       isParent,
       parentId: isParent || !parentId ? undefined : parentId,
+      sortOrder: Number(formData.get("sortOrder")) || 0,
     };
 
     try {
@@ -139,12 +143,13 @@ export default function LeftMenuPage() {
   }
 
   async function handleDelete(menu: LeftMenu) {
-    if (!confirm(`Delete menu "${menu.name}"?`)) return;
+    setConfirmDelete(null);
     await fetch(`/api/left-menu/${menu.id}`, { method: "DELETE" });
     await loadMenus();
   }
 
   const columns: DataTableColumn<LeftMenu>[] = [
+    { header: "Order", cell: (menu) => <span className="text-muted-foreground">{menu.sortOrder}</span> },
     { header: "Menu Name", cell: (menu) => <span className="font-medium text-foreground">{menu.name}</span> },
     { header: "Menu Key", cell: (menu) => <span className="text-muted-foreground">{menu.menuKey}</span> },
     { header: "URL", cell: (menu) => <span className="text-muted-foreground">{menu.url ?? "—"}</span> },
@@ -220,7 +225,7 @@ export default function LeftMenuPage() {
               <Power className="h-3.5 w-3.5" />
               Toggle status
             </ActionsMenuItem>
-            <ActionsMenuItem destructive onClick={() => handleDelete(menu)}>
+            <ActionsMenuItem destructive onClick={() => setConfirmDelete(menu)}>
               <Trash2 className="h-3.5 w-3.5" />
               Delete
             </ActionsMenuItem>
@@ -290,6 +295,20 @@ export default function LeftMenuPage() {
               </div>
             </div>
 
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="sortOrder" className="text-[12px] font-medium text-foreground">
+                Sort Order
+              </label>
+              <input
+                id="sortOrder"
+                name="sortOrder"
+                type="number"
+                defaultValue={editingMenu?.sortOrder ?? 0}
+                placeholder="Lower numbers appear first in the sidebar"
+                className="rounded-lg border border-border bg-background px-3 py-2 text-[12px] text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card"
+              />
+            </div>
+
             <label className="flex items-center gap-2 text-[12px] font-medium text-foreground">
               <input
                 type="checkbox"
@@ -337,6 +356,17 @@ export default function LeftMenuPage() {
             </button>
           </form>
         </Modal>
+      ) : null}
+
+      {confirmDelete ? (
+        <ConfirmDialog
+          title="Delete menu"
+          message={`Delete menu "${confirmDelete.name}"? This cannot be undone.`}
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => handleDelete(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
       ) : null}
     </div>
   );

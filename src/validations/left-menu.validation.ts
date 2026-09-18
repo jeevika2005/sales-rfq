@@ -7,6 +7,7 @@ export const createLeftMenuSchema = z.object({
   url: z.string().trim().optional(),
   isParent: z.boolean().default(false),
   parentId: z.uuid().optional(),
+  sortOrder: z.number().int().default(0),
 });
 
 export const updateLeftMenuSchema = createLeftMenuSchema;

@@ -1,0 +1,22 @@
+// In-memory sliding-window limiter — fine for a single dev/small-deployment
+// instance. A multi-instance production deployment would need a shared
+// store (Redis) instead, since each instance would otherwise track its
+// own counts.
+type Bucket = { count: number; resetAt: number };
+
+const buckets = new Map<string, Bucket>();
+
+export function checkRateLimit(key: string, limit: number, windowMs: number): boolean {
+  const now = Date.now();
+  const bucket = buckets.get(key);
+
+  if (!bucket || now > bucket.resetAt) {
+    buckets.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+
+  if (bucket.count >= limit) return false;
+
+  bucket.count += 1;
+  return true;
+}

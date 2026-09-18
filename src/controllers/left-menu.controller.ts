@@ -38,7 +38,7 @@ export async function List() {
 
     const menus = await prisma.leftMenu.findMany({
       where: { trashed: false },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: { parent: { select: { name: true } } },
     });
 
@@ -55,7 +55,7 @@ export async function Dropdown() {
     const menus = await prisma.leftMenu.findMany({
       where: { active: true, trashed: false },
       select: { id: true, menuKey: true, name: true, isParent: true, parentId: true },
-      orderBy: { name: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     });
 
     return sendSuccessResponse(menus, "Left menu fetched successfully", RESPONSE_CODE.SUCCESS, HTTP_STATUS.OK);
@@ -184,7 +184,7 @@ export async function MyMenu() {
 
     const menus = await prisma.leftMenu.findMany({
       where: { active: true, trashed: false },
-      orderBy: { name: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     });
 
     if (session.user.role === UserRole.admin) {

@@ -1,52 +1,62 @@
-import React from 'react';
-import { FileText, CheckCircle2, TrendingUp, Trophy } from 'lucide-react';
+import { FileText, CheckCircle2, TrendingUp, Trophy } from "lucide-react";
 
-export function DashboardKPICards() {
-  // Mock data for Phase 0 UI layout
-  const kpiData = [
+import type { DashboardAnalytics } from "@/types/dashboard";
+
+export function DashboardKPICards({ kpis }: { kpis: DashboardAnalytics["kpis"] }) {
+  const cards = [
     {
-      title: 'Total quotes',
-      value: '142',
+      title: "Total Quotes",
+      value: kpis.totalQuotes.toLocaleString(),
       icon: FileText,
-      description: 'All visible quotes',
+      description: "All visible quotes",
+      accent: "bg-primary",
+      badge: "bg-primary/10 text-primary",
     },
     {
-      title: 'Active quotes',
-      value: '45',
+      title: "Active Quotes",
+      value: kpis.activeQuotes.toLocaleString(),
       icon: TrendingUp,
-      description: 'Draft, pending, quoted',
+      description: "Draft, pending, quoted",
+      accent: "bg-amber-500",
+      badge: "bg-amber-500/10 text-amber-600",
     },
     {
-      title: 'Win rate',
-      value: '32%',
+      title: "Win Rate",
+      value: `${kpis.winRate}%`,
       icon: Trophy,
-      description: 'Based on closed quotes',
+      description: "Based on closed quotes",
+      accent: "bg-emerald-500",
+      badge: "bg-emerald-500/10 text-emerald-600",
     },
     {
-      title: 'Won quotes',
-      value: '31',
+      title: "Won Quotes",
+      value: kpis.wonQuotes.toLocaleString(),
       icon: CheckCircle2,
-      description: 'Won or completed',
+      description: "Won or completed",
+      accent: "bg-violet-500",
+      badge: "bg-violet-500/10 text-violet-600",
     },
   ];
 
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-      {kpiData.map((item) => (
+      {cards.map((card) => (
         <div
-          key={item.title}
-          className="relative overflow-hidden rounded-[8px] border border-border/40 bg-card/60 p-6 shadow-sm flex items-center gap-4 transition-all hover:shadow-md backdrop-blur-md bg-gradient-to-br from-card/80 to-muted/30"
+          key={card.title}
+          className="relative overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-shadow hover:shadow-md"
         >
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <item.icon className="h-6 w-6" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground truncate uppercase tracking-wider">
-              {item.title}
-            </p>
-            <p className="mt-1 text-2xl font-semibold text-foreground">
-              {item.value}
-            </p>
+          <div className={`absolute inset-x-0 top-0 h-1 ${card.accent}`} />
+          <div className="flex items-start justify-between gap-3 p-5">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {card.title}
+              </p>
+              <p className="mt-2 text-3xl font-bold tabular-nums text-foreground">{card.value}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{card.description}</p>
+            </div>
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${card.badge}`}>
+              <card.icon className="h-5 w-5" />
+            </div>
           </div>
         </div>
       ))}
